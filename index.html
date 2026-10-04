@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Adaptive Risk-Certified Event-Triggered Replanning for Dynamic Navigation (CERT-Replan).">
+  <meta name="keywords" content="Conformal Prediction, Adaptive Conformal Inference, CVaR, Control Barrier Function, DPCBF, Event-Triggered Replanning, MPC, Dynamic Obstacle Avoidance">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CERT-Replan: Adaptive Risk-Certified Event-Triggered Replanning</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+
+  <style>
+    .structure-image img {
+      max-width: 100%;
+      height: auto;
+      display: flex;
+      margin: 0 auto;
+      justify-content: center;
+      border-radius: 8px;
+    }
+    .video-container {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin: 0 auto 15px auto;
+      max-width: 90%;
+    }
+    .summary-video-container {
+      max-width: 80%;
+      margin: 0 auto 15px auto;
+    }
+    .plot-container img {
+      max-width: 90%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border-radius: 4px;
+    }
+    .plot-section-title {
+      margin-top: 30px;
+      margin-bottom: 15px;
+    }
+    .figure-caption {
+      font-size: 0.9rem;
+      color: #555;
+      text-align: left;
+      margin-top: 10px;
+      margin-bottom: 25px;
+    }
+
+    /* Results tables */
+    .results-table {
+      margin: 0 auto;
+    }
+    .results-table th, .results-table td {
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    .results-table th:first-child, .results-table td.method {
+      text-align: left !important;
+    }
+    .results-table tr.ours {
+      background-color: #fdecea !important;
+    }
+    .results-table tr.ours td.method {
+      font-weight: 700;
+      color: #c0392b;
+    }
+    .table-caption {
+      font-size: 0.9rem;
+      color: #555;
+      text-align: left;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">Adaptive Risk-Certified Event-Triggered Replanning for Dynamic Navigation</h1>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">Richie Ryulie Suganda<sup>1</sup>,</span>
+            <span class="author-block">Bin Hu<sup>2</sup></span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>Department of Electrical and Computer Engineering, University of Houston, Houston, TX 77004, USA</span><br>
+            <span class="author-block"><sup>2</sup>Department of Engineering Technology, University of Houston, Houston, TX 77004, USA</span>
+          </div>
+
+          <div class="is-size-6 publication-authors">
+            <span class="author-block"><a href="mailto:rrsugand@cougarnet.uh.edu">rrsugand@cougarnet.uh.edu</a>,</span>
+            <span class="author-block"><a href="mailto:bhu11@central.uh.edu">bhu11@central.uh.edu</a></span>
+          </div>
+
+          <div class="is-size-5 publication-venue" style="margin: 10px auto 0 auto;">
+            Conference on Robot Learning (CoRL) 2026
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#simulation" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-youtube"></i></span>
+                  <span>Video</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Safe navigation in dynamic environments requires robots to plan under obstacle predictions whose errors are uncertain, non-stationary, and can induce rare but safety-critical failures. Existing control-barrier-function safety filters can reject immediately unsafe controls, but they provide little guidance on <i>when the current finite-horizon planning mode itself is becoming unsafe</i> as prediction uncertainty evolves.
+          </p>
+          <p>
+            We propose <b>Conformal Event-Triggered Risk-Certified Replanning (CERT-Replan)</b>, a framework that uses calibrated barrier risk as an early-warning signal for replanning. CERT-Replan calibrates horizon-indexed obstacle-prediction residuals online and uses the resulting uncertainty radii to evaluate dynamic-obstacle safety margins. A one-step safety filter protects the next applied control, while a horizon-level risk monitor evaluates the upper-tail CVaR of predicted barrier-violation losses along the current MPC rollout. When this risk exceeds an allocated budget, CERT-Replan rejects the current planning mode and selects a lower-risk alternative, such as a different speed profile, corridor, or homotopy class, rather than repeatedly correcting the same nominal plan.
+          </p>
+          <p>
+            In a non-stationary benchmark, CERT-Replan achieves an <b>83.3% collision reduction</b> relative to the safety-filter-only baseline, while reducing average safety-filter intervention by <b>32.4%</b>. Hardware-in-the-loop experiments further demonstrate onboard feasibility.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">CERT-Replan Framework</h2>
+        <div class="structure-image">
+          <img src="./static/images/Fig1_Framework.jpg" alt="CERT-Replan framework diagram">
+        </div>
+        <p style="text-align: left; margin-top: 15px;">
+          The key gap we address is <i>temporal</i>: a one-step safety filter can repeatedly correct unsafe controls, yet still push the robot toward regions where feasible controls run out. CERT-Replan therefore treats the <b>local planning mode</b> (reference, speed profile, corridor or homotopy class, and risk allocation used by MPC), not only the next control input, as the object to be certified. It does so through four contributions:
+        </p>
+        <ol style="text-align: left; margin-top: 10px; margin-left: 1.5em;">
+          <li><b>Horizon-indexed adaptive conformal calibration</b> of obstacle-prediction errors, producing online position and velocity uncertainty radii that are <i>shared</i> by immediate safety filtering and horizon-level mode evaluation.</li>
+          <li>An <b>ACI + Adaptive-CVaR-DPCBF (AAC-DPCBF) safety filter</b> (bottom) that uses calibrated tightening and lower-tail CVaR constraints to protect the next applied control under non-stationary uncertainty, adapting the tail mass online to preserve feasibility.</li>
+          <li>A <b>finite-horizon CERT risk monitor</b> (top left) that evaluates the current mode through the upper-tail CVaR of predicted barrier-violation losses, yielding a <b>conditional risk certificate</b> for that mode.</li>
+          <li>An <b>event-triggered MPC replanning layer</b> (top right) that replaces the current mode, e.g. stop, yield, slow down, or detour, once its allocated horizon-risk budget is exceeded.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+
+      <div class="column">
+        <div class="content">
+          <h2 class="title is-3">Calibrated One-Step AAC-DPCBF Filter</h2>
+          <p>
+            A dynamic parabolic CBF (DPCBF) encodes safety with respect to each obstacle using relative position and velocity in a line-of-sight frame. Adaptive conformal inference tightens this margin: the calibrated position radius enlarges the effective safety radius, while the velocity radius makes relative velocity less favorable.
+          </p>
+          <p>
+            Since a larger margin is safer, the filter constrains the <b>lower-tail CVaR</b> of the next-step margin, choosing the most conservative tail mass that remains feasible. A heavily penalized slack signals near-infeasibility and immediately triggers replanning.
+          </p>
+        </div>
+      </div>
+
+      <div class="column">
+        <div class="content">
+          <h2 class="title is-3">Risk-Certified Event-Triggered Replanning</h2>
+          <p>
+            The safety filter certifies the next input, but not whether the current mode should be continued. For each obstacle and horizon step, CERT-Replan computes the <b>upper-tail CVaR</b> of the predicted barrier-violation loss along the MPC rollout and sums the normalized risks into a horizon risk.
+          </p>
+          <p>
+            By Markov's inequality and a union bound, this horizon risk <b>upper-bounds the probability</b> of any margin violation over the horizon for the evaluated mode. When it exceeds the allocated budget, the mode is rejected and the planner selects the lowest-cost risk-feasible alternative.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section" id="simulation">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Simulation Results</h2>
+
+    <div class="content has-text-justified">
+      <p>
+        We compare CERT-Replan against nominal DPCBF, TEB, and our safety-filter-only AAC-DPCBF over <b>100 randomized trials per scenario</b> in a 16 &times; 50 m workspace with moving obstacles whose positions and velocities are subject to uncertainty. A trial succeeds if the robot reaches the goal without violating the safety radius; otherwise it is counted as a collision or a timeout (episode longer than 60 s).
+      </p>
+    </div>
+
+
+    <h3 class="title is-4 has-text-centered plot-section-title">Simulation 1: Crowded Dynamic Environment</h3>
+
+    <div class="video-container summary-video-container">
+      <video autoplay controls muted loop playsinline width="100%">
+        <source src="./static/videos/Simulation1.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        The dense-crowd environment contains <b>30 moving obstacles</b> under <b>stationary Gaussian</b> prediction uncertainty and tests persistent interaction under prediction noise. The video shows one of the 100 randomized trials, adding each method in turn.
+      </p>
+    </div>
+    <div class="structure-image" style="margin-top: 10px;">
+      <img src="./static/images/Fig2a_Simulation1.png" alt="Simulation 1 trajectories in the crowded dynamic environment">
+    </div>
+    <p class="figure-caption">
+      <b>Representative trajectories.</b> Under stationary Gaussian uncertainty, nominal DPCBF and TEB collide, while AAC-DPCBF and CERT-Replan remain collision-free. Replanning gives modest gains here because alternative modes have similar risk.
+    </p>
+
+    <p class="table-caption">
+      100 randomized trials with 30 moving obstacles and unknown obstacle uncertainties. Best success and collision rates in bold.
+    </p>
+    <div class="table-container">
+      <table class="table is-striped is-hoverable is-fullwidth results-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Success (%) &uarr;</th>
+            <th>Collision (%) &darr;</th>
+            <th>Path length (m)</th>
+            <th>&#8214;u &minus; &#363;<sub>k</sub>&#8214;<sub>2</sub> &darr;</th>
+            <th>Replans</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="method">DPCBF</td><td>19</td><td>81</td><td>47.6 &plusmn; 0.7</td><td>0.092 &plusmn; 0.057</td><td>&ndash;</td></tr>
+          <tr><td class="method">TEB</td><td>85</td><td>15</td><td>47.3 &plusmn; 0.4</td><td>&ndash;</td><td>&ndash;</td></tr>
+          <tr class="ours"><td class="method">AAC-DPCBF (Ours)</td><td>96</td><td>4</td><td>51.1 &plusmn; 3.2</td><td>0.237 &plusmn; 0.101</td><td>&ndash;</td></tr>
+          <tr class="ours"><td class="method">CERT-Replan (Ours)</td><td><b>97</b></td><td><b>3</b></td><td>51.9 &plusmn; 3.2</td><td>0.156 &plusmn; 0.152</td><td>35 &plusmn; 3.9</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        Nominal DPCBF fails frequently and TEB still collides in 15% of trials. Conformal calibration plus adaptive tail-risk filtering (AAC-DPCBF) brings collisions down to 4%. CERT-Replan achieves the best overall result, <b>97% success and 3% collision</b>, while reducing average safety-filter intervention by <b>34.2%</b> relative to AAC-DPCBF. The gain in success over AAC-DPCBF is modest here because this scene mainly stresses local obstacle avoidance, and nearby alternative modes often carry similar risk.
+      </p>
+    </div>
+
+    <h3 class="title is-4 has-text-centered plot-section-title">Simulation 2: Non-Stationary Distribution Shift</h3>
+
+    <div class="video-container summary-video-container">
+      <video autoplay controls muted loop playsinline width="100%">
+        <source src="./static/videos/Simulation2.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        The nonstationary corridor contains <b>12 moving obstacles</b> and isolates the effect of <b>time-varying prediction error</b>: as the robot advances, the noise shifts from a tight Gaussian to a bounded Gaussian&ndash;Laplace mixture with heavy tails. The video shows CERT-Replan replanning to avoid the congested, high-risk area.
+      </p>
+    </div>
+    <div class="structure-image" style="margin-top: 10px;">
+      <img src="./static/images/Fig2b_Simulation2.png" alt="Simulation 2 trajectories in the nonstationary corridor">
+    </div>
+    <p class="figure-caption">
+      <b>Representative trajectories.</b> As prediction error shifts from Gaussian to bounded heavy-tailed uncertainty, DPCBF, TEB, and AAC-DPCBF all collide, while CERT-Replan triggers a lower-risk mode change and reaches the goal.
+    </p>
+
+    <p class="table-caption">
+      100 randomized trials with 12 moving obstacles. The prediction-error distribution changes from a tight Gaussian (&sigma; = 0.05) to a bounded Gaussian&ndash;Laplace mixture with heavy tails. Best success and collision rates in bold.
+    </p>
+    <div class="table-container">
+      <table class="table is-striped is-hoverable is-fullwidth results-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Success (%) &uarr;</th>
+            <th>Collision (%) &darr;</th>
+            <th>Path length (m)</th>
+            <th>&#8214;u &minus; &#363;<sub>k</sub>&#8214;<sub>2</sub> &darr;</th>
+            <th>Replans</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="method">DPCBF</td><td>3</td><td>97</td><td>46.0 &plusmn; 0.1</td><td>0.062 &plusmn; 0.045</td><td>&ndash;</td></tr>
+          <tr><td class="method">TEB</td><td>66</td><td>34</td><td>46.2 &plusmn; 0.4</td><td>&ndash;</td><td>&ndash;</td></tr>
+          <tr class="ours"><td class="method">AAC-DPCBF (Ours)</td><td>79</td><td>12</td><td>55.7 &plusmn; 6.1</td><td>0.327 &plusmn; 0.121</td><td>&ndash;</td></tr>
+          <tr class="ours"><td class="method">CERT-Replan (Ours)</td><td><b>86</b></td><td><b>2</b></td><td>53.4 &plusmn; 4.1</td><td>0.221 &plusmn; 0.055</td><td>39.1 &plusmn; 8.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        Under distribution shift, nominal DPCBF collapses to 3% success and TEB collides in 34% of trials. AAC-DPCBF is more robust, but as a one-step filter it can still fail when the current plan enters regions where uncertainty inflation shrinks the feasible control set. CERT-Replan performs best with <b>86% success and 2% collision</b> (an <b>83.3% collision reduction</b> over AAC-DPCBF) while reducing safety-filter intervention by <b>32.4%</b>. The risk-certified trigger activates in the transition and heavy-tailed regions, switching to a lower-risk mode before one-step filtering becomes insufficient.
+      </p>
+    </div>
+
+    <h3 class="title is-4 has-text-centered plot-section-title">Ablation: Safety-Filter Components</h3>
+    <p class="table-caption">
+      Safety-filter ablation without risk-certified replanning. All methods share the same robot dynamics, MPC horizon, DPCBF parameters, and obstacle scenarios.
+    </p>
+    <div class="table-container">
+      <table class="table is-hoverable is-fullwidth results-table">
+        <thead>
+          <tr>
+            <th>Environment</th>
+            <th>Method</th>
+            <th>Success (%) &uarr;</th>
+            <th>Collision (%) &darr;</th>
+            <th>Path length (m)</th>
+            <th>&#8214;u &minus; &#363;<sub>k</sub>&#8214;<sub>2</sub> &darr;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="4" style="text-align: left !important;"><b>Dense crowd</b></td><td class="method">DPCBF</td><td>19</td><td>81</td><td>47.6 &plusmn; 0.7</td><td>0.092 &plusmn; 0.057</td></tr>
+          <tr><td class="method">ACI + DPCBF</td><td>71</td><td>20</td><td>49.3 &plusmn; 2.2</td><td>0.474 &plusmn; 0.327</td></tr>
+          <tr><td class="method">Adaptive-CVaR-DPCBF</td><td>76</td><td>24</td><td>47.7 &plusmn; 0.9</td><td>0.109 &plusmn; 0.051</td></tr>
+          <tr class="ours"><td class="method">AAC-DPCBF (Ours)</td><td><b>96</b></td><td><b>4</b></td><td>51.1 &plusmn; 3.2</td><td>0.237 &plusmn; 0.101</td></tr>
+          <tr><td rowspan="4" style="text-align: left !important;"><b>Nonstationary</b></td><td class="method">DPCBF</td><td>3</td><td>97</td><td>46.0 &plusmn; 0.1</td><td>0.062 &plusmn; 0.045</td></tr>
+          <tr><td class="method">ACI + DPCBF</td><td>58</td><td>37</td><td>49.2 &plusmn; 2.3</td><td>0.613 &plusmn; 0.335</td></tr>
+          <tr><td class="method">Adaptive-CVaR-DPCBF</td><td>4</td><td>96</td><td>45.8 &plusmn; 0.1</td><td>0.062 &plusmn; 0.038</td></tr>
+          <tr class="ours"><td class="method">AAC-DPCBF (Ours)</td><td><b>79</b></td><td><b>12</b></td><td>55.7 &plusmn; 6.1</td><td>0.327 &plusmn; 0.121</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        Conformal calibration and adaptive CVaR are <b>complementary</b>. In the dense crowd, ACI strongly reduces collisions by inflating the barrier under uncertainty, while adaptive CVaR improves success with less control intervention. Under distribution shift, adaptive CVaR alone performs like nominal DPCBF: risk adaptation cannot compensate for a miscalibrated error distribution. ACI recovers much of the lost performance, and combining both gives the strongest safety-filter-only result.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<section class="section" id="hardware" style="background-color: #f5f5f5;">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Hardware Experiments</h2>
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-full-width">
+        <div class="video-container summary-video-container" style="margin-top: 20px;">
+          <video autoplay controls muted loop playsinline width="100%">
+            <source src="./static/videos/Hardware.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="content has-text-justified">
+          <p>
+            We evaluate CERT-Replan on a <b>Husarion ROSbot 2 Pro</b> with a <b>Jetson Orin Nano</b>, executing the full controller onboard. Dynamic obstacles and long-tailed prediction uncertainty are injected virtually for repeatability, while static obstacles block the line of sight.
+          </p>
+        </div>
+
+        <div class="structure-image" style="margin-top: 20px;">
+          <img src="./static/images/Fig3_Hardware.png" alt="Hardware experiment trajectories and metrics">
+        </div>
+        <p class="figure-caption">
+          <b>Hardware experiment.</b> CERT-Replan triggers an event-triggered replan toward an alternative route near the high-risk region, while nominal DPCBF collides. CERT-Replan reaches the goal with a shorter path than AAC-DPCBF and maintains positive clearance after the critical interaction.
+        </p>
+      </div>
+    </div>
+
+    <h3 class="title is-4 has-text-centered plot-section-title">Hardware Results</h3>
+    <p class="table-caption">
+      10 trials per method on the Husarion ROSbot 2 Pro. Path length is reported over successful trials. Remaining trials are timeouts.
+    </p>
+    <div class="table-container">
+      <table class="table is-striped is-hoverable is-fullwidth results-table" style="background-color: #fff;">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Success (%) &uarr;</th>
+            <th>Collision (%) &darr;</th>
+            <th>Timeout (%)</th>
+            <th>Path length (m) &darr;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="method">DPCBF</td><td>0</td><td>100</td><td>0</td><td>&ndash;</td></tr>
+          <tr class="ours"><td class="method">AAC-DPCBF (Ours)</td><td>60</td><td>20</td><td>20</td><td>10.71 &plusmn; 1.60</td></tr>
+          <tr class="ours"><td class="method">CERT-Replan (Ours)</td><td><b>90</b></td><td><b>10</b></td><td>0</td><td><b>9.33 &plusmn; 0.26</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="content has-text-justified">
+      <p>
+        Nominal DPCBF collides in every trial. AAC-DPCBF raises success to 60% but produces the longest successful-run path due to repeated filter corrections. CERT-Replan achieves <b>90% success</b> with a shorter, more consistent path, suggesting that the horizon-risk trigger shifts part of the safety response from conservative filter-only corrections to the planner.
+      </p>
+    </div>
+
+    <div class="structure-image" style="margin-top: 20px;">
+      <img src="./static/images/Fig4_RealRobot.jpg" alt="Real-robot snapshots comparing DPCBF, AAC-DPCBF, and CERT-Replan">
+    </div>
+    <p class="figure-caption">
+      <b>Real-robot snapshots.</b> Rows compare nominal DPCBF, AAC-DPCBF, and CERT-Replan across successive snapshots. Nominal DPCBF collides with the dynamic obstacles, whereas CERT-Replan changes its local plan and reaches the goal.
+    </p>
+
+  </div>
+</section>
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@inproceedings{suganda2026certreplan,
+  author    = {Suganda, Richie Ryulie and Hu, Bin},
+  title     = {Adaptive Risk-Certified Event-Triggered Replanning for Dynamic Navigation},
+  booktitle = {Conference on Robot Learning (CoRL)},
+  year      = {2026},
+}</code></pre>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content has-text-centered">
+          <p>
+            Website template adapted from <a href="https://github.com/nerfies/nerfies.github.io">NeRFies</a> under a <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International</a> license.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
