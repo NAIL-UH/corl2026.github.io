@@ -30,6 +30,11 @@
       justify-content: center;
       border-radius: 8px;
     }
+    .method-image {
+      margin-bottom: 20px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
     .video-container {
       border-radius: 8px;
       overflow: hidden;
@@ -171,15 +176,21 @@
         <div class="structure-image">
           <img src="./static/images/Fig1_Framework.jpg" alt="CERT-Replan framework diagram">
         </div>
-        <p style="text-align: left; margin-top: 15px;">
-          The key gap we address is <i>temporal</i>: a one-step safety filter can repeatedly correct unsafe controls, yet still push the robot toward regions where feasible controls run out. CERT-Replan therefore treats the <b>local planning mode</b> (reference, speed profile, corridor or homotopy class, and risk allocation used by MPC), not only the next control input, as the object to be certified. It does so through four contributions:
+        <p class="figure-caption">
+          <b>CERT-Replan framework.</b> The CERT layer monitors the horizon risk of the current local planning mode and triggers replanning when the mode is no longer risk-certified. The AAC-DPCBF filter enforces one-step tail-risk-aware safety under calibrated prediction uncertainty.
         </p>
-        <ol style="text-align: left; margin-top: 10px; margin-left: 1.5em;">
-          <li><b>Horizon-indexed adaptive conformal calibration</b> of obstacle-prediction errors, producing online position and velocity uncertainty radii that are <i>shared</i> by immediate safety filtering and horizon-level mode evaluation.</li>
-          <li>An <b>ACI + Adaptive-CVaR-DPCBF (AAC-DPCBF) safety filter</b> (bottom) that uses calibrated tightening and lower-tail CVaR constraints to protect the next applied control under non-stationary uncertainty, adapting the tail mass online to preserve feasibility.</li>
-          <li>A <b>finite-horizon CERT risk monitor</b> (top left) that evaluates the current mode through the upper-tail CVaR of predicted barrier-violation losses, yielding a <b>conditional risk certificate</b> for that mode.</li>
-          <li>An <b>event-triggered MPC replanning layer</b> (top right) that replaces the current mode, e.g. stop, yield, slow down, or detour, once its allocated horizon-risk budget is exceeded.</li>
-        </ol>
+        <div class="content has-text-justified">
+          <p>
+            The key gap we address is temporal. A one-step safety filter can repeatedly modify unsafe controls, but repeated correction of the same nominal plan may still push the robot toward regions where future feasible controls are scarce or unavailable. Similarly, resolving the same MPC problem at every step does not answer the higher-level question of when the robot should change the local reference, speed profile, corridor, homotopy class, or risk allocation. Event-triggered replanning provides the appropriate abstraction: update the plan only when a task-relevant condition indicates that the current mode should no longer be trusted. Our central idea is to use <b>calibrated barrier risk</b> as this condition. Rather than treating risk only as a constraint on the next input, CERT-Replan uses it as an <b>early-warning signal for replacing the current local planning mode</b>.
+          </p>
+          <p>This paper makes four contributions:</p>
+          <ol>
+            <li>We introduce a <b>horizon-indexed adaptive conformal calibration</b> mechanism for dynamic-obstacle prediction errors, producing online position and velocity uncertainty radii that are shared by immediate safety filtering and horizon-level mode evaluation.</li>
+            <li>We formulate an <b>ACI+Adaptive-CVaR-DPCBF safety filter</b> that uses calibrated geometric tightening and lower-tail CVaR constraints to protect the next applied control under non-stationary prediction uncertainty, while adapting the CVaR tail mass to preserve feasibility.</li>
+            <li>We propose a <b>finite-horizon CERT risk monitor</b> that evaluates the current local planning mode through upper-tail CVaR of predicted barrier-violation losses, yielding a <b>conditional risk certificate</b> for the evaluated mode.</li>
+            <li>We integrate this certificate into an <b>event-triggered MPC replanning layer</b> that replaces the current mode when its allocated horizon-risk budget is exceeded, and validate the resulting framework in randomized simulations and hardware-in-the-loop experiments.</li>
+          </ol>
+        </div>
       </div>
     </div>
   </div>
@@ -192,11 +203,11 @@
       <div class="column">
         <div class="content">
           <h2 class="title is-3">Calibrated One-Step AAC-DPCBF Filter</h2>
+          <div class="structure-image method-image" style="box-shadow: none;">
+            <img src="./static/images/Fig1b_SafetyFilter.jpg" alt="AAC-DPCBF safety filter" style="max-width: 60%;">
+          </div>
           <p>
-            A dynamic parabolic CBF (DPCBF) encodes safety with respect to each obstacle using relative position and velocity in a line-of-sight frame. Adaptive conformal inference tightens this margin: the calibrated position radius enlarges the effective safety radius, while the velocity radius makes relative velocity less favorable.
-          </p>
-          <p>
-            Since a larger margin is safer, the filter constrains the <b>lower-tail CVaR</b> of the next-step margin, choosing the most conservative tail mass that remains feasible. A heavily penalized slack signals near-infeasibility and immediately triggers replanning.
+            CERT-Replan evaluates the current mode at two levels: the AAC-DPCBF filter protects the next applied input, while the horizon-risk monitor determines whether the mode should be replaced. <b>Adaptive conformal calibration</b> updates horizon-indexed position and velocity radii online, so the radii expand under repeated miscoverage and contract when forecasts are over-covered. These radii tighten the DPCBF margin: the position radius enlarges the effective safety radius and the velocity radius makes relative velocity less favorable. Since larger margin is safer, the filter constrains its <b>lower-tail CVaR</b>, with the tail mass chosen as the most conservative feasible value; a positive slack indicates near one-step filter infeasibility and triggers replanning.
           </p>
         </div>
       </div>
@@ -204,11 +215,11 @@
       <div class="column">
         <div class="content">
           <h2 class="title is-3">Risk-Certified Event-Triggered Replanning</h2>
+          <div class="structure-image method-image" style="box-shadow: none;">
+            <img src="./static/images/Fig1a_CERTLayer.jpg" alt="CERT layer: horizon CVaR risk monitor, event trigger, and replanning update">
+          </div>
           <p>
-            The safety filter certifies the next input, but not whether the current mode should be continued. For each obstacle and horizon step, CERT-Replan computes the <b>upper-tail CVaR</b> of the predicted barrier-violation loss along the MPC rollout and sums the normalized risks into a horizon risk.
-          </p>
-          <p>
-            By Markov's inequality and a union bound, this horizon risk <b>upper-bounds the probability</b> of any margin violation over the horizon for the evaluated mode. When it exceeds the allocated budget, the mode is rejected and the planner selects the lowest-cost risk-feasible alternative.
+            The safety filter certifies the next input but not whether the current mode should be continued. The <b>horizon-risk monitor</b> sums the normalized <b>upper-tail CVaR</b> of predicted barrier-violation losses along the MPC rollout into a horizon risk, which upper-bounds the probability of a margin violation for the evaluated mode (a <b>conditional risk certificate</b>, not a distribution-free closed-loop guarantee). When this risk exceeds its allocated budget, a local risk exceeds its local budget, or the filter slack is positive, the current mode is rejected and the planner selects the lowest-cost risk-feasible mode, such as stop, yield, slow down, or detour.
           </p>
         </div>
       </div>
@@ -223,7 +234,7 @@
 
     <div class="content has-text-justified">
       <p>
-        We compare CERT-Replan against nominal DPCBF, TEB, and our safety-filter-only AAC-DPCBF over <b>100 randomized trials per scenario</b> in a 16 &times; 50 m workspace with moving obstacles whose positions and velocities are subject to uncertainty. A trial succeeds if the robot reaches the goal without violating the safety radius; otherwise it is counted as a collision or a timeout (episode longer than 60 s).
+        The simulation uses <b>100 randomized trials per scenario</b> in a 16 &times; 50 workspace with moving obstacles whose positions and velocities are subject to uncertainty. A trial is successful if the robot reaches the goal without violating the safety radius. Otherwise, the trial is counted as a failure due to collision or timeout. Collision indicates a robot-obstacle safety violation, and timeout indicates that the robot exceeds the episode length of 60 s. When success and collision rates do not sum to 100%, the remaining trials are timeouts. We report path length over successful trials and use &#8214;u<sub>k</sub> &minus; &#363;<sub>k</sub>&#8214;<sub>2</sub> to measure average safety-filter intervention, where &#363;<sub>k</sub> is the nominal MPC input and u<sub>k</sub> is the filtered input.
       </p>
     </div>
 
@@ -237,18 +248,18 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        The dense-crowd environment contains <b>30 moving obstacles</b> under <b>stationary Gaussian</b> prediction uncertainty and tests persistent interaction under prediction noise. The video shows one of the 100 randomized trials, adding each method in turn.
+        The dense-crowd environment contains <b>30 moving obstacles</b> and tests persistent interaction under prediction noise.
       </p>
     </div>
     <div class="structure-image" style="margin-top: 10px;">
       <img src="./static/images/Fig2a_Simulation1.png" alt="Simulation 1 trajectories in the crowded dynamic environment">
     </div>
     <p class="figure-caption">
-      <b>Representative trajectories.</b> Under stationary Gaussian uncertainty, nominal DPCBF and TEB collide, while AAC-DPCBF and CERT-Replan remain collision-free. Replanning gives modest gains here because alternative modes have similar risk.
+      <b>Simulation trajectories.</b> Crowded dynamic environment with stationary Gaussian uncertainty. Nominal DPCBF and TEB collide, while AAC-DPCBF and CERT-Replan remain collision-free. Replanning gives modest gains because alternatives have similar risk.
     </p>
 
     <p class="table-caption">
-      100 randomized trials with 30 moving obstacles and unknown obstacle uncertainties. Best success and collision rates in bold.
+      Crowded dynamic-environment results over 100 randomized trials with 30 moving obstacles and unknown obstacle uncertainties. The proposed CERT-Replan achieves the highest success rate and lowest collision rate.
     </p>
     <div class="table-container">
       <table class="table is-striped is-hoverable is-fullwidth results-table">
@@ -272,7 +283,7 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        Nominal DPCBF fails frequently and TEB still collides in 15% of trials. Conformal calibration plus adaptive tail-risk filtering (AAC-DPCBF) brings collisions down to 4%. CERT-Replan achieves the best overall result, <b>97% success and 3% collision</b>, while reducing average safety-filter intervention by <b>34.2%</b> relative to AAC-DPCBF. The gain in success over AAC-DPCBF is modest here because this scene mainly stresses local obstacle avoidance, and nearby alternative modes often carry similar risk.
+        The table shows that nominal DPCBF fails frequently, with 19% success and 81% collision, while TEB improves success to 85% but still collides in 15% of trials. AAC-DPCBF reaches 96% success and 4% collision, showing that conformal uncertainty calibration and adaptive tail-risk filtering substantially improve the one-step safety filter. The ablation below further shows that these components are complementary: ACI+DPCBF reduces collision from 81% to 20%, Adaptive-CVaR-DPCBF improves success to 76%, and their combination gives the strongest safety-filter-only result. CERT-Replan achieves the best overall performance, with <b>97% success and 3% collision</b>, while reducing average safety-filter intervention by <b>34.2%</b>. The gain in success rates over AAC-DPCBF is modest because this scene mainly stresses local obstacle avoidance rather than strategic mode switching; the figure above shows that nearby alternatives often have similar risk.
       </p>
     </div>
 
@@ -285,18 +296,18 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        The nonstationary corridor contains <b>12 moving obstacles</b> and isolates the effect of <b>time-varying prediction error</b>: as the robot advances, the noise shifts from a tight Gaussian to a bounded Gaussian&ndash;Laplace mixture with heavy tails. The video shows CERT-Replan replanning to avoid the congested, high-risk area.
+        The nonstationary corridor contains <b>12 dynamic obstacles</b> and is designed to isolate the effect of time-varying prediction error on safe navigation. As the robot advances, the noise model changes from a tight Gaussian distribution (&sigma; = 0.05) to a bounded Gaussian&ndash;Laplace mixture with peak tail probability 0.15, Laplace scale 0.25, and clipping at &plusmn;0.75 m.
       </p>
     </div>
     <div class="structure-image" style="margin-top: 10px;">
       <img src="./static/images/Fig2b_Simulation2.png" alt="Simulation 2 trajectories in the nonstationary corridor">
     </div>
     <p class="figure-caption">
-      <b>Representative trajectories.</b> As prediction error shifts from Gaussian to bounded heavy-tailed uncertainty, DPCBF, TEB, and AAC-DPCBF all collide, while CERT-Replan triggers a lower-risk mode change and reaches the goal.
+      <b>Simulation trajectories.</b> Nonstationary corridor with spatially varying uncertainty. The inset shows prediction error shifting from Gaussian to bounded heavy-tailed uncertainty, prompting CERT-Replan to trigger a lower-risk mode change.
     </p>
 
     <p class="table-caption">
-      100 randomized trials with 12 moving obstacles. The prediction-error distribution changes from a tight Gaussian (&sigma; = 0.05) to a bounded Gaussian&ndash;Laplace mixture with heavy tails. Best success and collision rates in bold.
+      Nonstationary distribution-shift results over 100 randomized trials with 12 moving obstacles. The prediction-error distribution changes from Gaussian to bounded heavy-tailed uncertainty.
     </p>
     <div class="table-container">
       <table class="table is-striped is-hoverable is-fullwidth results-table">
@@ -320,13 +331,18 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        Under distribution shift, nominal DPCBF collapses to 3% success and TEB collides in 34% of trials. AAC-DPCBF is more robust, but as a one-step filter it can still fail when the current plan enters regions where uncertainty inflation shrinks the feasible control set. CERT-Replan performs best with <b>86% success and 2% collision</b> (an <b>83.3% collision reduction</b> over AAC-DPCBF) while reducing safety-filter intervention by <b>32.4%</b>. The risk-certified trigger activates in the transition and heavy-tailed regions, switching to a lower-risk mode before one-step filtering becomes insufficient.
+        The table shows that nominal DPCBF fails under this shift, with 3% success and 97% collision. TEB improves success to 66%, but still collides in 34% of trials. AAC-DPCBF reaches 79% success and 12% collision, showing that conformal calibration and adaptive CVaR improve robustness under shifted prediction errors. However, AAC-DPCBF remains a one-step safety filter and can still fail when the current local plan enters regions where uncertainty inflation reduces the feasible control set. CERT-Replan performs best, achieving <b>86% success, 2% collision</b>, and reducing safety-filter intervention by <b>32.4%</b>. As shown in the figure above, the risk-certified trigger activates in the transition and heavy-tailed regions, allowing the planner to switch to a lower-risk candidate mode before one-step filtering becomes insufficient.
       </p>
     </div>
 
     <h3 class="title is-4 has-text-centered plot-section-title">Ablation: Safety-Filter Components</h3>
+    <div class="content has-text-justified">
+      <p>
+        We perform an ablation study to isolate the contribution of each safety-filter component before adding risk-certified replanning. All methods use the same MPC planner, robot dynamics, DPCBF parameters, and obstacle scenarios. They differ only in how the DPCBF constraint handles prediction uncertainty and tail risk. The nominal DPCBF baseline uses the predicted obstacle state without conformal tightening or CVaR risk filtering. ACI+DPCBF adds adaptive conformal inference to the nominal DPCBF by tightening the barrier with calibrated position and velocity radii, but does not use CVaR. Adaptive-CVaR-DPCBF uses adaptive CVaR tail-risk filtering without conformal prediction or conformal tightening. AAC-DPCBF combines both components, using adaptive conformal calibration together with adaptive CVaR-DPCBF filtering.
+      </p>
+    </div>
     <p class="table-caption">
-      Safety-filter ablation without risk-certified replanning. All methods share the same robot dynamics, MPC horizon, DPCBF parameters, and obstacle scenarios.
+      Safety-filter ablation without risk-certified replanning. All methods use the same robot dynamics, MPC horizon, DPCBF parameters, and obstacle scenarios as the main experiments.
     </p>
     <div class="table-container">
       <table class="table is-hoverable is-fullwidth results-table">
@@ -354,7 +370,10 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        Conformal calibration and adaptive CVaR are <b>complementary</b>. In the dense crowd, ACI strongly reduces collisions by inflating the barrier under uncertainty, while adaptive CVaR improves success with less control intervention. Under distribution shift, adaptive CVaR alone performs like nominal DPCBF: risk adaptation cannot compensate for a miscalibrated error distribution. ACI recovers much of the lost performance, and combining both gives the strongest safety-filter-only result.
+        The table shows that both ACI and adaptive CVaR improve over nominal DPCBF, but their roles differ. In the dense-crowd setting, ACI+DPCBF strongly reduces collision by inflating the barrier under prediction uncertainty, while Adaptive-CVaR-DPCBF improves success with smaller average control intervention by focusing the filter on lower-tail barrier risk. Combining both gives the strongest safety-filter-only result, improving success to 96% and reducing collision to 4%.
+      </p>
+      <p>
+        The nonstationary setting highlights the importance of calibration. Adaptive-CVaR-DPCBF without ACI performs similarly to nominal DPCBF, indicating that risk adaptation alone cannot compensate for a shifted or miscalibrated prediction-error distribution. ACI+DPCBF recovers much of the lost performance by adapting the uncertainty radii online, and AAC-DPCBF further improves success to 79% while reducing collision to 12%. These results support the design of the proposed safety filter: <b>conformal calibration provides reliable uncertainty scaling, while adaptive CVaR shapes the controller response to tail-risk events</b>.
       </p>
     </div>
 
@@ -374,7 +393,7 @@
         </div>
         <div class="content has-text-justified">
           <p>
-            We evaluate CERT-Replan on a <b>Husarion ROSbot 2 Pro</b> with a <b>Jetson Orin Nano</b>, executing the full controller onboard. Dynamic obstacles and long-tailed prediction uncertainty are injected virtually for repeatability, while static obstacles block the line of sight.
+            We evaluate CERT-Replan on a <b>Husarion ROSbot 2 Pro</b> with a <b>Jetson Orin Nano</b>. The robot physically executes the onboard controller, while the dynamic obstacles and prediction uncertainty are injected virtually for repeatability. The hardware experiment uses 10 trials per method.
           </p>
         </div>
 
@@ -382,7 +401,7 @@
           <img src="./static/images/Fig3_Hardware.png" alt="Hardware experiment trajectories and metrics">
         </div>
         <p class="figure-caption">
-          <b>Hardware experiment.</b> CERT-Replan triggers an event-triggered replan toward an alternative route near the high-risk region, while nominal DPCBF collides. CERT-Replan reaches the goal with a shorter path than AAC-DPCBF and maintains positive clearance after the critical interaction.
+          <b>Experiment on the Husarion ROSbot 2 Pro over 10 trials per method.</b> The robot executes the controller onboard, while dynamic obstacles are virtually injected for repeatability. CERT-Replan achieves the highest success rate and shorter successful-run path length than AAC-DPCBF.
         </p>
       </div>
     </div>
@@ -411,7 +430,7 @@
     </div>
     <div class="content has-text-justified">
       <p>
-        Nominal DPCBF collides in every trial. AAC-DPCBF raises success to 60% but produces the longest successful-run path due to repeated filter corrections. CERT-Replan achieves <b>90% success</b> with a shorter, more consistent path, suggesting that the horizon-risk trigger shifts part of the safety response from conservative filter-only corrections to the planner.
+        Nominal DPCBF collides in all trials, while AAC-DPCBF improves the success rate to 60% with a 20% collision rate but produces the longest successful-run path. CERT-Replan performs best, achieving <b>90% success and 10% collision</b> while reducing successful-run path length relative to AAC-DPCBF. The trajectory snapshots and closest-obstacle distance plot show that CERT-Replan changes its local plan near the high-risk region and maintains positive clearance after the critical interaction, suggesting that the horizon-risk trigger reduces reliance on conservative filter-only corrections by shifting part of the safety response to the planner.
       </p>
     </div>
 
@@ -419,7 +438,7 @@
       <img src="./static/images/Fig4_RealRobot.jpg" alt="Real-robot snapshots comparing DPCBF, AAC-DPCBF, and CERT-Replan">
     </div>
     <p class="figure-caption">
-      <b>Real-robot snapshots.</b> Rows compare nominal DPCBF, AAC-DPCBF, and CERT-Replan across successive snapshots. Nominal DPCBF collides with the dynamic obstacles, whereas CERT-Replan changes its local plan and reaches the goal.
+      <b>Real-robot experiment on the Husarion ROSbot 2 Pro.</b> Rows compare nominal DPCBF, ACI+Adaptive-CVaR-DPCBF, and CERT-Replan across successive snapshots. The robot physically executes the onboard controller, while dynamic obstacles and prediction uncertainty are injected virtually. Nominal DPCBF collides with the dynamic obstacles, whereas CERT-Replan changes its local plan and reaches the goal.
     </p>
 
   </div>
